@@ -3,13 +3,21 @@
 # AUXILIARY FUNCTIONS
 # ------------------------------------------------------------------------------
 
-PRE_EXISTING=""
-fetch_pre_existing() {
-    PRE_EXISTING=$(cd $1 && git ls-files | sed -e 's/^/A  /')
+GIT_FILES=""
+fecth_git_files() {
+    GIT_FILES=$(cd $1 && git ls-files | sed -e 's/^/A  /')
 }
 
-check_pre_existing() {
-    # maybe?
+check_git_files() {
+    ! [ -z "${GIT_FILES// }" ]
+}
+
+git_at() {
+    [ -e "$1/.git" ]
+}
+
+dot_installed() {
+    [ -e "$1/.git/hooks/pre-commit-target-dir" ]
 }
 
 # ------------------------------------------------------------------------------
@@ -17,6 +25,8 @@ check_pre_existing() {
 # ------------------------------------------------------------------------------
 
 VERSION="1.0"
+NAME="dotfiler"
+
 BASE="\033"
 CLEAN="$BASE[m"
 BLACK="$BASE[30m"
@@ -30,14 +40,16 @@ CYAN="$BASE[36m"
 # dotfile help ---------------------------------------------
 dot_help() {
 
-printf "Usage: dotfiler [-v | -h] [--help | --version] <command> [--source=.] [--target=..] [--force]
+printf "Usage: $NAME [-v | -h] [--help | --version] <command> [--source=.] [--target=..] [--force]
 
 Available Commands:
-    install\t\tInstalls dotfiler on [sources]'s Git repository
-    remove\t\tUninstalls dotfiler [sources]'s Git repository
+    install\t\tInstalls $NAME on [sources]'s Git repository
+    remove\t\tUninstalls $NAME [sources]'s Git repository
 
-    sync\t\tSyncs the [source]'s Git repository directory
+    sync\t\tSyncs [source]'s files with [target]. [target] may be omitted if $NAME was already installed on [source]
     \t\t--force: Deletes existing files and re-creates them
+
+    unsync\t\tDangerous: deletes all of [source]'s files that matches with [target]. [target] may be omitted if $NAME was already installed on [source]
 
     help\t\tPrints this message
     version\t\tTells you this program's version ($VERSION, btw)\n"
@@ -46,12 +58,14 @@ Available Commands:
 # dotfile install ------------------------------------------
 dot_install() {
     
-    if [ -e "$1/.git" ]; then
+    if git_at $1; then
 
-        fetch_pre_existing $1
-        dot_sync
+        fecth_git_files $1
+        echo "$GIT_FILES"
+        
+        # cp "$PRECOMMIT $1/.git/hooks/pre-commit" && echo "$TARGET" > "$1/.git/hooks/pre-commit-target-dir"
 
-        if ! [ -z "${PRE_EXISTING// }" ]; then
+        if check_git_files; then
             printf "$YELLOW[Question]$CLEAN Do you want to sync the existing dotfiles [Y/n]?  \b"
 
             while true; do
@@ -61,6 +75,7 @@ dot_install() {
                     "n" | "N") break ;;
                     "" | "y" | "Y")
                         echo "echo $$pre_existing | .git/hooks/pre-commit"
+                        dot_sync
                         break
                         ;;
 
@@ -71,8 +86,7 @@ dot_install() {
             done
         fi
 
-        # cat "$TARGET" > pre-commit-dir
-        printf "$GREEN[Success]$CLEAN Installed$PINK dotfiler$CLEAN at$CYAN $1 $CLEAN\n"
+        printf "$GREEN[Success]$CLEAN Installed$PINK $NAME$CLEAN at$CYAN $1 $CLEAN\n"
 
     else
         printf "$RED[Error]$CLEAN Couldn't find a$PINK git$CLEAN repository at$CYAN $1 $CLEAN\n"
@@ -82,19 +96,67 @@ dot_install() {
 
 # dotfile remove -------------------------------------------
 dot_remove() {
+    
     echo "Remove $1"
+
+    # if [ -e "$1/.git" ]; then
+
+    #     fecth_git_files $1
+
+    #     if check_git_files; then
+    #         printf "$YELLOW[Question]$CLEAN Do you want to sync the existing dotfiles [Y/n]?  \b"
+
+    #         while true; do
+    #             read answer
+
+    #             case "$answer" in
+    #                 "n" | "N") break ;;
+    #                 "" | "y" | "Y")
+    #                     echo "echo $$pre_existing | .git/hooks/pre-commit"
+    #                     dot_sync
+    #                     break
+    #                     ;;
+
+    #                 *)
+    #                     printf "$YELLOW[?]$CLEAN Option not recognized. [Y/n]?  \b"
+
+    #             esac
+    #         done
+    #     fi
+
+    #     cp "$(pwd)/hooks/pre-commit $1/.git/hooks/" && echo "$TARGET" > "$1/.git/hooks/pre-commit-target-dir"
+    #     printf "$GREEN[Success]$CLEAN Installed$PINK $NAME$CLEAN at$CYAN $1 $CLEAN\n"
+
+    # else
+    #     printf "$RED[Error]$CLEAN Couldn't find a$PINK git$CLEAN repository at$CYAN $1 $CLEAN\n"
+    # fi
+
 }
 
 # dotfile sync ---------------------------------------------
 dot_sync() {
     
-    if [ -z "${PRE_EXISTING// }" ]; then
-        fetch_pre_existing $1
+    ! check_git_files && fecth_git_files $1
+
+    if dot_installed $1; then
+        command="$1/.git/hooks/pre-commit"
+        echo "$CYAN[Sync]$CLEAN Using previously installed $YELLOW$NAME$CLEAN instace..."
+
+    elif ! [ -z "$TARGET" ]
+        echo "$TARGET" > "$PRECOMMIT-target-dir"
+        command="$PRECOMMIT"
+        echo "$CYAN[Sync]$CLEAN Using one-time $YELLOW$NAME$CLEAN with Target $PURPLE$TARGET$CLEAN..."
+
     fi
 
-    echo "$PRE_EXISTING"
+    if $IS_FORCED; then
+        echo "$(echo "$GIT_FILES" | sed 's/A  /D  /')"
+        echo "$GIT_FILES" | sed 's/A  /D  /' | $command
 
-    # TODO: Check for --force
+    fi
+
+    echo "$GIT_FILES"
+    echo "$GIT_FILES | $command"
 }
 
 
@@ -102,7 +164,9 @@ dot_sync() {
 # MAIN CODE
 # ------------------------------------------------------------------------------
 
-OPTS=$(getopt -o hv -l version,help,source:,target: -n "dotfiler" -- "$@")
+MY_DIR=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
+PRECOMMIT="$MY_DIR/hooks/pre-commit"
+OPTS=$(getopt -o hv -l version,help,force,source:,target: -n "$NAME" -- "$@")
 
 HAS_HELP=false
 HAS_VERSION=false
@@ -140,7 +204,7 @@ do
 done
 
 if $HAS_VERSION; then
-    echo "dotfiler version $VERSION"
+    echo "$NAME version $VERSION"
 
 elif $HAS_HELP || [ -z $SUBCOMMAND ]; then
     dot_help

@@ -16,8 +16,12 @@ create() {
 		echo "[CREATE] Folder already exists"
 	fi
 
-	echo "[CREATE] ln '$SOURCE_DIR/$1' '$TARGET_DIR/$1'"
-	ln "$SOURCE_DIR/$1" "$TARGET_DIR/$1"
+	if ! [ -e "$TARGET_DIR/$1" ]; then
+		echo "[CREATE] ln '$SOURCE_DIR/$1' '$TARGET_DIR/$1'"
+		ln "$SOURCE_DIR/$1" "$TARGET_DIR/$1"
+	else
+		echo "[CREATE] File already exists"
+	fi
 }
 
 # ----------------------------------------------------------
