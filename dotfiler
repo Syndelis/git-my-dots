@@ -16,8 +16,24 @@ git_at() {
     [ -e "$1/.git" ]
 }
 
-dot_installed() {
+is_dot_installed() {
     [ -e "$1/.git/hooks/pre-commit-target-dir" ]
+}
+
+PRECOMMIT_COMMAND=""
+get_pre_commit() {
+
+    if is_dot_installed $1; then
+        PRECOMMIT_COMMAND="$1/.git/hooks/pre-commit"
+        printf "$CYAN[Sync]$CLEAN Using previously installed $YELLOW$NAME$CLEAN instace \n"
+
+    elif ! [ -z "$TARGET" ]; then
+        echo "$TARGET" > "$PRECOMMIT-target-dir"
+        PRECOMMIT_COMMAND="$PRECOMMIT"
+        printf "$CYAN[Sync]$CLEAN Using one-time $YELLOW$NAME$CLEAN with Target $PURPLE$TARGET$CLEAN \n"
+
+    fi
+
 }
 
 # ------------------------------------------------------------------------------
@@ -40,30 +56,30 @@ CYAN="$BASE[36m"
 # dotfile help ---------------------------------------------
 dot_help() {
 
-printf "Usage: $NAME [-v | -h] [--help | --version] <command> [--source=.] [--target=..] [--force]
+printf "Usage: $NAME [-v | -h] [--help | --version] <command> [--source=.] [--target=..] [--force] [--safe]
 
-Available Commands:
-    install\t\tInstalls $NAME on [sources]'s Git repository
-    remove\t\tUninstalls $NAME [sources]'s Git repository
+COMMANDS
+    install\tInstalls $NAME on [sources]'s Git repository
+    remove\tUninstalls $NAME [sources]'s Git repository
 
-    sync\t\tSyncs [source]'s files with [target]. [target] may be omitted if $NAME was already installed on [source]
-    \t\t--force: Deletes existing files and re-creates them
+    sync\tSyncs [source]'s files with [target]. [target] may be omitted if $NAME was already installed on [source]
 
-    unsync\t\tDangerous: deletes all of [source]'s files that matches with [target]. [target] may be omitted if $NAME was already installed on [source]
+    unsync\tDangerous: deletes all of [source]'s files that matches with [target]. [target] may be omitted if $NAME was already installed on [source]
 
-    help\t\tPrints this message
-    version\t\tTells you this program's version ($VERSION, btw)\n"
+    help\tPrints this message
+    version\tTells you this program's version ($VERSION, btw)\n
+    
+OPTIONS"
 }
 
-# dotfile install ------------------------------------------
+# dotfiler install ------------------------------------------
 dot_install() {
     
     if git_at $1; then
 
         fecth_git_files $1
-        echo "$GIT_FILES"
         
-        # cp "$PRECOMMIT $1/.git/hooks/pre-commit" && echo "$TARGET" > "$1/.git/hooks/pre-commit-target-dir"
+        [ -z $SAFE_MODE ] && cp "$PRECOMMIT" "$1/.git/hooks/pre-commit" && echo "$TARGET" > "$1/.git/hooks/pre-commit-target-dir"
 
         if check_git_files; then
             printf "$YELLOW[Question]$CLEAN Do you want to sync the existing dotfiles [Y/n]?  \b"
@@ -74,8 +90,7 @@ dot_install() {
                 case "$answer" in
                     "n" | "N") break ;;
                     "" | "y" | "Y")
-                        echo "echo $$pre_existing | .git/hooks/pre-commit"
-                        dot_sync
+                        dot_sync $1
                         break
                         ;;
 
@@ -86,77 +101,96 @@ dot_install() {
             done
         fi
 
-        printf "$GREEN[Success]$CLEAN Installed$PINK $NAME$CLEAN at$CYAN $1 $CLEAN\n"
+        printf "$GREEN[Success]$CLEAN Installed $YELLOW$NAME$CLEAN at $PURPLE$1$CLEAN\n"
 
     else
-        printf "$RED[Error]$CLEAN Couldn't find a$PINK git$CLEAN repository at$CYAN $1 $CLEAN\n"
+        printf "$RED[Error]$CLEAN Couldn't find a$PINK git$CLEAN repository at $PURPLE$1$CLEAN\n"
     fi
 
 }
 
-# dotfile remove -------------------------------------------
+# dotfiler remove -------------------------------------------
 dot_remove() {
     
-    echo "Remove $1"
+    if git_at $1; then
+        if is_dot_installed $1; then
+            [ -z $SAFE_MODE ] && rm -f "$1/.git/hooks/pre-commit" "$1/.git/hooks/pre-commit-target-dir"
 
-    # if [ -e "$1/.git" ]; then
+            fecth_git_files $1
+            if check_git_files; then
+                printf "$YELLOW[Question]$CLEAN Do you want to unsync the leftover dotfiles [y/N]?  \b"
 
-    #     fecth_git_files $1
+                while true; do
+                    read answer
 
-    #     if check_git_files; then
-    #         printf "$YELLOW[Question]$CLEAN Do you want to sync the existing dotfiles [Y/n]?  \b"
+                    case "$answer" in
+                        "" | "n" | "N") break ;;
+                        "y" | "Y")
+                            dot_unsync $1
+                            break
+                            ;;
 
-    #         while true; do
-    #             read answer
+                        *)
+                            printf "$YELLOW[?]$CLEAN Option not recognized. [Y/n]?  \b"
 
-    #             case "$answer" in
-    #                 "n" | "N") break ;;
-    #                 "" | "y" | "Y")
-    #                     echo "echo $$pre_existing | .git/hooks/pre-commit"
-    #                     dot_sync
-    #                     break
-    #                     ;;
+                    esac
+                done
+            fi
 
-    #                 *)
-    #                     printf "$YELLOW[?]$CLEAN Option not recognized. [Y/n]?  \b"
+            printf "$GREEN[Success]$CLEAN Removed$PINK $NAME$CLEAN at $PURPLE$1$CLEAN\n"
 
-    #             esac
-    #         done
-    #     fi
-
-    #     cp "$(pwd)/hooks/pre-commit $1/.git/hooks/" && echo "$TARGET" > "$1/.git/hooks/pre-commit-target-dir"
-    #     printf "$GREEN[Success]$CLEAN Installed$PINK $NAME$CLEAN at$CYAN $1 $CLEAN\n"
-
-    # else
-    #     printf "$RED[Error]$CLEAN Couldn't find a$PINK git$CLEAN repository at$CYAN $1 $CLEAN\n"
-    # fi
+        else
+            printf "$RED[Error]$CLEAN $YELLOW$NAME$CLEAN is not installed at $PURPLE$1$CLEAN\n"
+        fi
+    else
+        printf "$RED[Error]$CLEAN $PURPLE$1$CLEAN is not a$PINK git$CLEAN repository\n"
+    fi
 
 }
 
-# dotfile sync ---------------------------------------------
+# dotfiler sync ---------------------------------------------
 dot_sync() {
+
+    if git_at $1; then
+        ! check_git_files && fecth_git_files $1
+
+        get_pre_commit $1
+
+        if $IS_FORCED; then
+            echo ""
+            echo "$GIT_FILES" | sed 's/A  /D  /' | $PRECOMMIT_COMMAND $SAFE_MODE
+
+        fi
+
+        echo ""
+        echo "$GIT_FILES" | $PRECOMMIT_COMMAND $SAFE_MODE
+
+        printf "$GREEN[Success]$CLEAN Synchronized dotfiles with $PURPLE$1$CLEAN\n"
     
-    ! check_git_files && fecth_git_files $1
+    else
+        printf "$RED[Error]$CLEAN No$PINK git$CLEAN repository at $PURPLE$1$CLEAN\n"
+    fi
+}
 
-    if dot_installed $1; then
-        command="$1/.git/hooks/pre-commit"
-        echo "$CYAN[Sync]$CLEAN Using previously installed $YELLOW$NAME$CLEAN instace..."
 
-    elif ! [ -z "$TARGET" ]
-        echo "$TARGET" > "$PRECOMMIT-target-dir"
-        command="$PRECOMMIT"
-        echo "$CYAN[Sync]$CLEAN Using one-time $YELLOW$NAME$CLEAN with Target $PURPLE$TARGET$CLEAN..."
+# dotfiler unsync -------------------------------------------
+dot_unsync() {
+
+    if git_at $1; then
+        ! check_git_files && fecth_git_files $1
+
+        get_pre_commit $1
+
+        echo ""
+        echo "$GIT_FILES" | sed 's/A  /D  /' | $PRECOMMIT_COMMAND $SAFE_MODE
+
+        printf "$GREEN[Success]$CLEAN Deleted matching dotfiles of $PURPLE$1$CLEAN\n"
+
+    else
+        printf "$RED[Error]$CLEAN No$PINK git$CLEAN repository at $PURPLE$1$CLEAN\n"
 
     fi
 
-    if $IS_FORCED; then
-        echo "$(echo "$GIT_FILES" | sed 's/A  /D  /')"
-        echo "$GIT_FILES" | sed 's/A  /D  /' | $command
-
-    fi
-
-    echo "$GIT_FILES"
-    echo "$GIT_FILES | $command"
 }
 
 
@@ -166,13 +200,15 @@ dot_sync() {
 
 MY_DIR=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
 PRECOMMIT="$MY_DIR/hooks/pre-commit"
-OPTS=$(getopt -o hv -l version,help,force,source:,target: -n "$NAME" -- "$@")
+OPTS=$(getopt -o hv -l version,help,force,safe,source:,target: -n "$NAME" -- "$@")
 
 HAS_HELP=false
 HAS_VERSION=false
 
 IS_FORCED=false
 IS_SYMBOLIC=false
+SAFE_MODE=""
+
 NAMED_ARGUMENT=""
 SUBCOMMAND=""
 SOURCE="."
@@ -185,6 +221,7 @@ do
         -v | --version) HAS_VERSION=true                ;;
         -h | --help)    HAS_HELP=true                   ;;
 
+        --safe)         SAFE_MODE=" --safe"             ;;
         --force)        IS_FORCED=true                  ;;
         --source)       NAMED_ARGUMENT="SOURCE"         ;;
         --target)       NAMED_ARGUMENT="TARGET"         ;;
@@ -202,6 +239,8 @@ do
 
     esac
 done
+
+! [ -z $SAFE_MODE ] && printf "[[ \033[21;36mSafe mode$CLEAN ]]\n"
 
 if $HAS_VERSION; then
     echo "$NAME version $VERSION"

@@ -1,4 +1,15 @@
 #!/bin/bash
+
+BASE="\033"
+CLEAN="$BASE[m"
+BLACK="$BASE[30m"
+RED="$BASE[31m"
+GREEN="$BASE[32m"
+YELLOW="$BASE[33m"
+PURPLE="$BASE[34m"
+PINK="$BASE[35m"
+CYAN="$BASE[36m"
+
 # ------------------------------------------------------------------------------
 # GIT OPERATIONS
 # ------------------------------------------------------------------------------
@@ -10,17 +21,21 @@ create() {
 	FILE_DIR=$(dirname -- "$TARGET_DIR/$1")
 
 	if ! [ -e "$FILE_DIR" ]; then
-		echo "[CREATE] mkdir -p $FILE_DIR"
-		mkdir -p $FILE_DIR
+		printf "$GREEN Create$CLEAN> mkdir -p $FILE_DIR\n"
+		$EDIT_MODE && mkdir -p $FILE_DIR
+
 	else
-		echo "[CREATE] Folder already exists"
+		printf "$GREEN Create$CLEAN> Folder $PURPLE$FILE_DIR$CLEAN already exists\n"
+
 	fi
 
 	if ! [ -e "$TARGET_DIR/$1" ]; then
-		echo "[CREATE] ln '$SOURCE_DIR/$1' '$TARGET_DIR/$1'"
-		ln "$SOURCE_DIR/$1" "$TARGET_DIR/$1"
+		printf "$GREEN Create$CLEAN> ln '$SOURCE_DIR/$1' '$TARGET_DIR/$1'\n"
+		$EDIT_MODE && ln "$SOURCE_DIR/$1" "$TARGET_DIR/$1"
+
 	else
-		echo "[CREATE] File already exists"
+		printf "$GREEN Create$CLEAN> File $PURPLE$1$CLEAN already exists\n"
+
 	fi
 }
 
@@ -29,8 +44,8 @@ create() {
 # git mv
 delete() {
 
-	echo "[DELETE] rm -f '$TARGET_DIR/$1'"
-	rm -f "$TARGET_DIR/$1"
+	printf "$RED Delete$CLEAN> rm -f '$TARGET_DIR/$1'\n"
+	$EDIT_MODE && rm -f "$TARGET_DIR/$1"
 
 }
 
@@ -43,6 +58,20 @@ USER_TARGET_DIR=$(cat $MY_DIR/pre-commit-target-dir)
 TARGET_DIR="$(readlink -f -- "$USER_TARGET_DIR")"
 SOURCE_DIR=$(pwd)
 
+EDIT_MODE=true
+OPTS=$(getopt -o s -l safe -n "pre-commit" -- "$@")
+
+for opt in $OPTS
+do
+	case "$opt" in
+		--safe) EDIT_MODE=false	;;
+	esac
+done
+
+if ! $EDIT_MODE; then
+	printf "[[ \033[21;36mSafe mode$CLEAN ]]\n"
+fi
+
 # Possible input from dotfiler
 INPUT=$(cat /dev/stdin)
 if [ -z "$INPUT" ]; then
@@ -51,7 +80,7 @@ fi
 
 echo "$INPUT" | while read alteration; do
 
-	echo "Current: ...$alteration..."
+	# echo "Current: ...$alteration..."
 	
 	what="${alteration:0:1}"
 	who="${alteration:3}"
