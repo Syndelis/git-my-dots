@@ -1,0 +1,70 @@
+#!/bin/bash
+# ------------------------------------------------------------------------------
+# GIT OPERATIONS
+# ------------------------------------------------------------------------------
+
+# git add
+# git mv
+create() {
+
+	FILE_DIR=$(dirname -- "$TARGET_DIR/$1")
+
+	if ! [ -e "$FILE_DIR" ]; then
+		echo "[CREATE] mkdir -p $FILE_DIR"
+		mkdir -p $FILE_DIR
+	else
+		echo "[CREATE] Folder already exists"
+	fi
+
+	echo "[CREATE] ln '$SOURCE_DIR/$1' '$TARGET_DIR/$1'"
+	ln "$SOURCE_DIR/$1" "$TARGET_DIR/$1"
+}
+
+# ----------------------------------------------------------
+# git rm
+# git mv
+delete() {
+
+	echo "[DELETE] rm -f '$TARGET_DIR/$1'"
+	rm -f "$TARGET_DIR/$1"
+
+}
+
+# ------------------------------------------------------------------------------
+# MAIN CODE
+# ------------------------------------------------------------------------------
+
+MY_DIR=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
+USER_TARGET_DIR=$(cat $MY_DIR/pre-commit-target-dir)
+TARGET_DIR="$(readlink -f -- "$USER_TARGET_DIR")"
+SOURCE_DIR=$(pwd)
+
+# Possible input from dotfiler
+INPUT=$(cat /dev/stdin)
+if [ -z "$INPUT" ]; then
+	INPUT=$(git status -s)
+fi
+
+echo "$INPUT" | while read alteration; do
+
+	echo "Current: ...$alteration..."
+	
+	what="${alteration:0:1}"
+	who="${alteration:3}"
+		
+	case "$what" in
+		"D") delete $who ;;
+		"A") create $who ;;
+		"M") echo "Modified ($who)" ;;
+
+		"R")
+			alters=(${who// -> / })
+			echo "Renamed (${alters[0]}) to (${alters[1]})"
+
+			delete ${alters[0]}
+			create ${alters[1]}
+			;;
+
+	esac
+
+done
