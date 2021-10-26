@@ -41,7 +41,7 @@ get_pre_commit() {
 # ------------------------------------------------------------------------------
 
 VERSION="1.0"
-NAME="dotfiler"
+NAME="git-my-dots"
 
 BASE="\033"
 CLEAN="$BASE[m"
@@ -55,21 +55,27 @@ CYAN="$BASE[36m"
 
 # dotfile help ---------------------------------------------
 dot_help() {
-
-printf "Usage: $NAME [-v | -h] [--help | --version] <command> [--source=.] [--target=..] [--force] [--safe]
+printf "Usage: $PINK$NAME$CLEAN $YELLOW[--help,-h | --version,-v]$CLEAN $CYAN<command>$CLEAN $YELLOW[--source=.] [--target=..] [--force] [--safe]$CLEAN
 
 COMMANDS
-    install\tInstalls $NAME on [sources]'s Git repository
-    remove\tUninstalls $NAME [sources]'s Git repository
+    ${CYAN}install$CLEAN\tInstalls $PINK$NAME$CLEAN on $YELLOW[sources]$CLEAN's ${PINK}Git$CLEAN repository
+    ${CYAN}remove$CLEAN\tUninstalls $PINK$NAME$CLEAN $YELLOW[sources]$CLEAN's ${PINK}Git$CLEAN repository
 
-    sync\tSyncs [source]'s files with [target]. [target] may be omitted if $NAME was already installed on [source]
+    ${CYAN}sync$CLEAN\tSyncs $YELLOW[source]$CLEAN's files with $YELLOW[target]$CLEAN. $YELLOW[target]$CLEAN may be omitted if $PINK$NAME$CLEAN was already installed on $YELLOW[source]$CLEAN
+    ${CYAN}unsync$CLEAN\tDangerous: deletes all of $YELLOW[source]$CLEAN's files that matches with $YELLOW[target]$CLEAN. $YELLOW[target]$CLEAN may be omitted if $PNIK$NAME$CLEAN was already installed on $YELLOW[source]$CLEAN
 
-    unsync\tDangerous: deletes all of [source]'s files that matches with [target]. [target] may be omitted if $NAME was already installed on [source]
-
-    help\tPrints this message
-    version\tTells you this program's version ($VERSION, btw)\n
+    ${CYAN}help$CLEAN\tPrints this message
+    ${CYAN}version$CLEAN\tTells you this program's version ($VERSION, btw)\n
     
-OPTIONS"
+OPTIONS
+    $YELLOW--source[=.]$CLEAN\tDirectory that contains the base dotfile repository. By default, it's the current directory
+    $YELLOW--target[=..]$CLEAN\tDirectory that will be targeted for mirroring the dotfiles to
+    
+    $YELLOW--safe$CLEAN\t\tThis option will make so that no files are altered on disk, so it only prints the changes the command intended on making
+    $YELLOW--force$CLEAN\t\tWhen running sync or install, will delete confliting files before re-syncing them. Do try it with --safe before actually doing it!
+
+    $YELLOW--help,-h$CLEAN\t\tSame as the help command
+    $YELLOW--version,-v$CLEAN\tSame as the version command\n"
 }
 
 # dotfiler install ------------------------------------------
@@ -101,10 +107,10 @@ dot_install() {
             done
         fi
 
-        printf "$GREEN[Success]$CLEAN Installed $YELLOW$NAME$CLEAN at $PURPLE$1$CLEAN\n"
+        printf "$GREEN[Success]$CLEAN Installed $PINK$NAME$CLEAN at $PURPLE$1$CLEAN\n"
 
     else
-        printf "$RED[Error]$CLEAN Couldn't find a$PINK git$CLEAN repository at $PURPLE$1$CLEAN\n"
+        printf "$RED[Error]$CLEAN Couldn't find a$PINK Git$CLEAN repository at $PURPLE$1$CLEAN\n"
     fi
 
 }
@@ -137,13 +143,13 @@ dot_remove() {
                 done
             fi
 
-            printf "$GREEN[Success]$CLEAN Removed$PINK $NAME$CLEAN at $PURPLE$1$CLEAN\n"
+            printf "$GREEN[Success]$CLEAN Removed$PINK$NAME$CLEAN at $PURPLE$1$CLEAN\n"
 
         else
-            printf "$RED[Error]$CLEAN $YELLOW$NAME$CLEAN is not installed at $PURPLE$1$CLEAN\n"
+            printf "$RED[Error]$CLEAN $PINK$NAME$CLEAN is not installed at $PURPLE$1$CLEAN\n"
         fi
     else
-        printf "$RED[Error]$CLEAN $PURPLE$1$CLEAN is not a$PINK git$CLEAN repository\n"
+        printf "$RED[Error]$CLEAN $PURPLE$1$CLEAN is not a$PINK Git$CLEAN repository\n"
     fi
 
 }
@@ -168,7 +174,7 @@ dot_sync() {
         printf "$GREEN[Success]$CLEAN Synchronized dotfiles with $PURPLE$1$CLEAN\n"
     
     else
-        printf "$RED[Error]$CLEAN No$PINK git$CLEAN repository at $PURPLE$1$CLEAN\n"
+        printf "$RED[Error]$CLEAN No$PINK Git$CLEAN repository at $PURPLE$1$CLEAN\n"
     fi
 }
 
@@ -187,12 +193,16 @@ dot_unsync() {
         printf "$GREEN[Success]$CLEAN Deleted matching dotfiles of $PURPLE$1$CLEAN\n"
 
     else
-        printf "$RED[Error]$CLEAN No$PINK git$CLEAN repository at $PURPLE$1$CLEAN\n"
+        printf "$RED[Error]$CLEAN No$PINK Git$CLEAN repository at $PURPLE$1$CLEAN\n"
 
     fi
 
 }
 
+# dotfiler version -----------------------------------------
+dot_version() {
+    printf "$PINK$NAME$CLEAN version $PURPLE$VERSION$CLEAN\n"
+}
 
 # ------------------------------------------------------------------------------
 # MAIN CODE
@@ -243,7 +253,7 @@ done
 ! [ -z $SAFE_MODE ] && printf "[[ \033[21;36mSafe mode$CLEAN ]]\n"
 
 if $HAS_VERSION; then
-    echo "$NAME version $VERSION"
+    dot_version
 
 elif $HAS_HELP || [ -z $SUBCOMMAND ]; then
     dot_help
