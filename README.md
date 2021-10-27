@@ -45,7 +45,7 @@ All of **Git My Dots!** features are completely optional, so you can use it howe
     </p>
     <p align=center><sup>Example of sync using the --force option</sup></p>
 
-    The sync command is a manual command that can be called at any time to synchronize your dotfiles with the repository. An optional <samp>--force</samp> flag may be passed to absolutely ensure you are in sync, deleting the old files and creating them again.
+    The sync command is a manual command that can be called at any time to synchronize your dotfiles with the repository. An optional [<samp>--force</samp>](#--force) flag may be passed to absolutely ensure you are in sync, deleting the old files and creating them again.
 
     *Note: Neither sync nor install will ever delete or overwrite existing files without the --force flag*
 
@@ -58,7 +58,7 @@ All of **Git My Dots!** features are completely optional, so you can use it howe
     </p>
     <p align=center><sup>Example of remove, unsync leftovers</sup></p>
 
-    Remove is the counterpart command of [install](#install). As such, it will uninstall **Git My Dots!** from the local (or pointed to via [<samp>--source</samp>](#kbd--sourcekbd)) repository. Additionally and contrary to install, it will offer to desync your dots with the repository, meaning it will delete every file that also exists in the repository.
+    Remove is the counterpart command of [install](#install). As such, it will uninstall **Git My Dots!** from the local (or pointed to via [<samp>--source</samp>](#--source)) repository. Additionally and contrary to install, it will offer to desync your dots with the repository, meaning it will delete every file that also exists in the repository.
 
 ---
 
@@ -89,7 +89,7 @@ All of **Git My Dots!** features are completely optional, so you can use it howe
 Example of both options being used:
 
 <p align=center>
-<img src="img/install--safe--force.png" alt="Simulating an installation with forced sync using the safe option" width="500">
+<img src="img/install--safe--force.png" alt="Simulating an installation with forced sync using the safe option" width="600">
 </p>
 <p align=center><sup>Simulating an installation with forced sync using the --safe option</sup></p>
 
@@ -102,12 +102,12 @@ Example of both options being used:
 
 - ### <kbd>--target</kbd>
 
-    Similarly to [<samp>--source</samp>](#kbd--sourcekbd), **Git My Dots!** will default the *target* directory to the parent of the current directory (`..`). The *target* directory is the directory to where we want to mirror our *source* directory.
+    Similarly to [<samp>--source</samp>](#--source), **Git My Dots!** will default the *target* directory to the parent of the current directory (`..`). The *target* directory is the directory to where we want to mirror our *source* directory.
 
 
 Example of both being used:
 ```sh
-me@machine:/usr/lib$ git-my-dots --source=$HOME/dotfiles --target=$HOME
+$ git-my-dots --source=$HOME/dotfiles --target=$HOME
 ```
 
 ---
@@ -149,7 +149,7 @@ me@machine:/usr/lib$ git-my-dots --source=$HOME/dotfiles --target=$HOME
     $ cd my-dots-repository
     $ git-my-dots sync --force
     ```
-    *Note that the [<samp>--force</samp>](#kbd--forcekbd) option will make sure colliding files are overwritten. If you're afraid it's gonna overwrite something it shouldn't, consider trying it out with the [<samp>--safe</samp>](#kbd--safekbd) option, which will print out everything that would get modified, without actually doing so. Refer to their respective sections for more info.*
+    *Note that the [<samp>--force</samp>](#--force) option will make sure colliding files are overwritten. If you're afraid it's gonna overwrite something it shouldn't, consider trying it out with the [<samp>--safe</samp>](#--safe) option, which will print out everything that would get modified, without actually doing so. Refer to their respective sections for more info.*
 
 ---
 
